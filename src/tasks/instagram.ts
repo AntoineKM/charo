@@ -12,10 +12,10 @@ const PREFIX = "[instagram]";
 
 const ROUTES = {
   BASE: "https://instagram.com/",
-  EXPLORE: "https://instagram.com/explore/people/",
+  EXPLORE: "https://instagram.com/explore/people",
 
-  API_DISCOVER: "https://i.instagram.com/api/v1/discover/ayml/",
-  API_FOLLOW: "https://i.instagram.com/api/v1/web/friendships/",
+  API_DISCOVER: "https://i.instagram.com/api/v1/discover/ayml",
+  API_FRIENDS: "https://i.instagram.com/api/v1/web/friendships",
 };
 
 const SESSION_ID = process.env.INSTAGRAM_SESSION_ID || "";
@@ -52,10 +52,10 @@ const instagramTask = async () => {
       // set headers to post request headers
       if (request.method() === "POST") {
         // Log.info(PREFIX, "update headers");
-        headers = request.headers();
+        if (request.headers().cookie) headers = request.headers();
       }
 
-      if (request.url().includes(ROUTES.API_FOLLOW)) {
+      if (request.url().includes(ROUTES.API_FRIENDS)) {
         const data = {
           method: "POST",
           mode: "cors",
@@ -90,6 +90,25 @@ const instagramTask = async () => {
     // reload page
     Log.info(PREFIX, "reload page");
     await page.reload();
+
+    // get all instagram accounts from database
+    const accounts = await Instagram.find();
+
+    // check if we have accounts that we follow since 1 day
+    const accountsToUnfollow = accounts.filter((account) => {
+      const createdAt = new Date(account.createdAt);
+      const now = new Date();
+      const diff = now.getTime() - createdAt.getTime();
+      const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+      // const diffDays = Math.ceil(diff / 1000); // <-- for testing
+      return diffDays >= 1;
+    });
+
+    // unfollow accounts
+    for (const account of accountsToUnfollow) {
+      await unfollow(page, account);
+      await page.waitForTimeout(1000);
+    }
 
     // get suggestions
     Log.info(PREFIX, "get suggestions...");
@@ -136,7 +155,7 @@ const getSuggestions = async (page: puppeteer.Page) => {
 };
 
 const follow = async (page: puppeteer.Page, account: any) => {
-  const url = `https://i.instagram.com/api/v1/web/friendships/${account.user.pk}/follow/`;
+  const url = `${ROUTES.API_FRIENDS}/${account.user.pk}/follow/`;
   await page.goto(url);
   Log.info(PREFIX, "followed", account.user.username);
 
@@ -146,6 +165,16 @@ const follow = async (page: puppeteer.Page, account: any) => {
     createdAt: new Date(),
   }).save();
   Log.info(PREFIX, "saved", account.user.username);
+};
+
+const unfollow = async (page: puppeteer.Page, item: any) => {
+  const url = `${ROUTES.API_FRIENDS}/${item.account.user.pk}/unfollow/`;
+  await page.goto(url);
+  Log.info(PREFIX, "unfollowed", item.account.user.username);
+
+  Log.info(PREFIX, `removing ${item.account.user.username} from database...`);
+  await Instagram.deleteOne({ _id: item._id });
+  Log.info(PREFIX, "removed", item.account.user.username);
 };
 
 const getCookie = (cookies: string, cname: string) => {
