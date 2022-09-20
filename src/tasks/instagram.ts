@@ -1,4 +1,4 @@
-import puppeteer from "puppeteer";
+import puppeteer, { ContinueRequestOverrides } from "puppeteer";
 import Log from "../utils/log";
 
 /**
@@ -14,9 +14,14 @@ const ROUTES = {
   EXPLORE: "https://instagram.com/explore/people/",
 
   API_DISCOVER: "https://i.instagram.com/api/v1/discover/ayml/",
+  API_FOLLOW: "https://i.instagram.com/api/v1/web/friendships/",
 };
 
 const SESSION_ID = process.env.INSTAGRAM_SESSION_ID || "";
+
+let headers: {
+  [key: string]: string;
+} = {};
 
 const instagramTask = async () => {
   const browser = await puppeteer.launch({
@@ -27,16 +32,6 @@ const instagramTask = async () => {
     {
       name: "sessionid",
       value: SESSION_ID,
-      domain: ".instagram.com",
-    },
-    {
-      name: "ig_did",
-      value: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
-      domXin: ".instagram.com",
-    },
-    {
-      name: "csrftoken",
-      value: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
       domain: ".instagram.com",
     },
   ];
@@ -53,7 +48,31 @@ const instagramTask = async () => {
     Log.info(PREFIX, "setup request interceptor");
     await page.setRequestInterception(true);
     await page.on("request", (request) => {
-      request.continue();
+      // set headers to post request headers
+      if (request.method() === "POST") {
+        // Log.info(PREFIX, "update headers");
+        headers = request.headers();
+      }
+
+      if (request.url().includes(ROUTES.API_FOLLOW)) {
+        const data = {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          redirect: "follow",
+          referrerPolicy: "strict-origin-when-cross-origin",
+          headers: {
+            "Sec-GPC": "1",
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "/",
+            "X-CSRFToken": getCookie(headers?.cookie, "csrftoken"),
+          },
+        } as ContinueRequestOverrides;
+        request.continue(data);
+      } else {
+        request.continue();
+      }
     });
 
     await page.goto(ROUTES.BASE);
@@ -75,6 +94,21 @@ const instagramTask = async () => {
     Log.info(PREFIX, "get suggestions...");
     const suggestions: any[] = await getSuggestions(page);
     Log.info(PREFIX, `got ${suggestions.length} suggestions`);
+
+    // get public accounts
+    Log.info(PREFIX, "get public accounts...");
+    const publicAccounts = suggestions.filter((suggestion) => {
+      return suggestion.user.is_private === false;
+    });
+    Log.info(PREFIX, `got ${publicAccounts.length} public accounts`);
+
+    // follow public accounts
+    Log.info(PREFIX, "follow public accounts...");
+    for (let i = 0; i < publicAccounts.length; i++) {
+      const account = publicAccounts[i];
+      await follow(page, account);
+      await page.waitForTimeout(1000);
+    }
   } catch (error) {
     Log.error(PREFIX, error);
   } finally {
@@ -98,6 +132,27 @@ const getSuggestions = async (page: puppeteer.Page) => {
   });
 
   return result;
+};
+
+const follow = async (page: puppeteer.Page, account: any) => {
+  const url = `https://i.instagram.com/api/v1/web/friendships/${account.user.pk}/follow/`;
+  await page.goto(url);
+  Log.info(PREFIX, "follow", account.user.username);
+};
+
+const getCookie = (cookies: string, cname: string) => {
+  const name = cname + "=";
+  const ca = cookies.split(";");
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == " ") {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return;
 };
 
 export default instagramTask;
