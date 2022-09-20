@@ -2,7 +2,7 @@
 Charognard bot for Charo pro.
 Instagram, TikTok, Twitter, Linkedin daily CRON tasks that's make your daily social tasks.
 
-## Current goals:
+## Current goals
 ### Instagram
 - ~~Connect to your Instagram account via your Session ID~~
 - ~~Get all your suggestions~~
