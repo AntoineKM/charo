@@ -8,5 +8,5 @@ Instagram, TikTok, Twitter, Linkedin daily CRON tasks that's make your daily soc
 - ~~Get all your suggestions~~
 - ~~Follow all public accounts~~
 - Like the second picture of all public accounts
-- Store each account in a database
+- ~~Store each account in a database~~
 - After 1 day, unfollow all accounts
