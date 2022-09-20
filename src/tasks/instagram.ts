@@ -1,4 +1,5 @@
 import puppeteer, { ContinueRequestOverrides } from "puppeteer";
+import Instagram from "../models/Instagram";
 import Log from "../utils/log";
 
 /**
@@ -137,7 +138,14 @@ const getSuggestions = async (page: puppeteer.Page) => {
 const follow = async (page: puppeteer.Page, account: any) => {
   const url = `https://i.instagram.com/api/v1/web/friendships/${account.user.pk}/follow/`;
   await page.goto(url);
-  Log.info(PREFIX, "follow", account.user.username);
+  Log.info(PREFIX, "followed", account.user.username);
+
+  Log.info(PREFIX, `saving ${account.user.username} to database...`);
+  await new Instagram({
+    account,
+    createdAt: new Date(),
+  }).save();
+  Log.info(PREFIX, "saved", account.user.username);
 };
 
 const getCookie = (cookies: string, cname: string) => {
