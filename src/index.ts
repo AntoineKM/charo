@@ -2,6 +2,7 @@ import dotenv from "dotenv-flow";
 import Log from "./utils/log";
 import fs from "fs";
 import path from "path";
+import { dbConfig } from "./services/mongodb/config";
 
 const main = async () => {
   // load dotenv files
@@ -15,6 +16,9 @@ const main = async () => {
   dotenv
     .listDotenvFiles(".", process.env.NODE_ENV)
     .forEach((file) => Log.info(`loaded env from ${file}`));
+
+  await dbConfig.connect();
+  Log.event("connected to mongodb");
 
   // launch tasks from tasks folder with fs
   const tasks = fs.readdirSync(path.join(__dirname, "tasks"));
