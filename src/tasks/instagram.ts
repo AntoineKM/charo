@@ -61,7 +61,7 @@ const instagramTask = async () => {
           mode: "cors",
           cache: "no-cache",
           credentials: "same-origin",
-          redirect: "follow",
+          redirect: request.url().includes("follow") ? "follow" : undefined,
           referrerPolicy: "strict-origin-when-cross-origin",
           headers: {
             "Sec-GPC": "1",
