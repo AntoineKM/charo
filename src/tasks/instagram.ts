@@ -1,6 +1,7 @@
 import puppeteer, { ContinueRequestOverrides } from "puppeteer";
 import Instagram from "../models/Instagram";
 import Log from "../utils/log";
+import schedule from "node-schedule";
 
 /**
  * Instagram task will contain 2 jobs:
@@ -25,116 +26,118 @@ let headers: {
 } = {};
 
 const instagramTask = async () => {
-  const browser = await puppeteer.launch({
-    headless: false,
+  schedule.scheduleJob("*/10 * * * *", async () => {
+    const browser = await puppeteer.launch({
+      headless: false,
+    });
+
+    const cookies = [
+      {
+        name: "sessionid",
+        value: SESSION_ID,
+        domain: ".instagram.com",
+      },
+    ];
+
+    try {
+      // init browser
+      Log.info(PREFIX, "init browser");
+      const page = await browser.newPage();
+      await page.setUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+      );
+
+      // setup request interceptor
+      Log.info(PREFIX, "setup request interceptor");
+      await page.setRequestInterception(true);
+      await page.on("request", (request) => {
+        // set headers to post request headers
+        if (request.method() === "POST") {
+          // Log.info(PREFIX, "update headers");
+          if (request.headers().cookie) headers = request.headers();
+        }
+
+        if (request.url().includes(ROUTES.API_FRIENDS)) {
+          const data = {
+            method: "POST",
+            mode: "cors",
+            cache: "no-cache",
+            credentials: "same-origin",
+            redirect: request.url().includes("follow") ? "follow" : undefined,
+            referrerPolicy: "strict-origin-when-cross-origin",
+            headers: {
+              "Sec-GPC": "1",
+              "Content-Type": "application/x-www-form-urlencoded",
+              Accept: "/",
+              "X-CSRFToken": getCookie(headers?.cookie, "csrftoken"),
+            },
+          } as ContinueRequestOverrides;
+          request.continue(data);
+        } else {
+          request.continue();
+        }
+      });
+
+      await page.goto(ROUTES.BASE);
+
+      // accept cookies
+      Log.info(PREFIX, "accepting cookies...");
+      await page.waitForSelector("div[role='dialog']");
+      await page.click("div[role='dialog'] button[tabindex='0']");
+
+      // set cookies
+      Log.info(PREFIX, "set cookies", cookies);
+      await page.setCookie(...cookies);
+
+      // reload page
+      Log.info(PREFIX, "reload page");
+      await page.reload();
+
+      // get all instagram accounts from database
+      const accounts = await Instagram.find();
+
+      // check if we have accounts that we follow since 1 day
+      const accountsToUnfollow = accounts.filter((account) => {
+        const createdAt = new Date(account.createdAt);
+        const now = new Date();
+        const diff = now.getTime() - createdAt.getTime();
+        const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
+        // const diffDays = Math.ceil(diff / 1000); // <-- for testing
+        return diffDays >= 1;
+      });
+
+      // unfollow accounts
+      for (const account of accountsToUnfollow) {
+        await unfollow(page, account);
+        await page.waitForTimeout(1000);
+      }
+
+      // get suggestions
+      Log.info(PREFIX, "get suggestions...");
+      const suggestions: any[] = await getSuggestions(page);
+      Log.info(PREFIX, `got ${suggestions.length} suggestions`);
+
+      // get public accounts
+      Log.info(PREFIX, "get public accounts...");
+      const publicAccounts = suggestions.filter((suggestion) => {
+        return suggestion.user.is_private === false;
+      });
+      Log.info(PREFIX, `got ${publicAccounts.length} public accounts`);
+
+      // follow public accounts
+      Log.info(PREFIX, "follow public accounts...");
+      for (let i = 0; i < publicAccounts.length; i++) {
+        const account = publicAccounts[i];
+        await follow(page, account);
+        await page.waitForTimeout(1000);
+      }
+    } catch (error) {
+      Log.error(PREFIX, error);
+    } finally {
+      Log.info(PREFIX, "browser closed");
+      //await browser.close();
+    }
   });
-
-  const cookies = [
-    {
-      name: "sessionid",
-      value: SESSION_ID,
-      domain: ".instagram.com",
-    },
-  ];
-
-  try {
-    // init browser
-    Log.info(PREFIX, "init browser");
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    );
-
-    // setup request interceptor
-    Log.info(PREFIX, "setup request interceptor");
-    await page.setRequestInterception(true);
-    await page.on("request", (request) => {
-      // set headers to post request headers
-      if (request.method() === "POST") {
-        // Log.info(PREFIX, "update headers");
-        if (request.headers().cookie) headers = request.headers();
-      }
-
-      if (request.url().includes(ROUTES.API_FRIENDS)) {
-        const data = {
-          method: "POST",
-          mode: "cors",
-          cache: "no-cache",
-          credentials: "same-origin",
-          redirect: request.url().includes("follow") ? "follow" : undefined,
-          referrerPolicy: "strict-origin-when-cross-origin",
-          headers: {
-            "Sec-GPC": "1",
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "/",
-            "X-CSRFToken": getCookie(headers?.cookie, "csrftoken"),
-          },
-        } as ContinueRequestOverrides;
-        request.continue(data);
-      } else {
-        request.continue();
-      }
-    });
-
-    await page.goto(ROUTES.BASE);
-
-    // accept cookies
-    Log.info(PREFIX, "accepting cookies...");
-    await page.waitForSelector("div[role='presentation']");
-    await page.click("div[role='presentation'] button[tabindex='0']");
-
-    // set cookies
-    Log.info(PREFIX, "set cookies", cookies);
-    await page.setCookie(...cookies);
-
-    // reload page
-    Log.info(PREFIX, "reload page");
-    await page.reload();
-
-    // get all instagram accounts from database
-    const accounts = await Instagram.find();
-
-    // check if we have accounts that we follow since 1 day
-    const accountsToUnfollow = accounts.filter((account) => {
-      const createdAt = new Date(account.createdAt);
-      const now = new Date();
-      const diff = now.getTime() - createdAt.getTime();
-      const diffDays = Math.ceil(diff / (1000 * 3600 * 24));
-      // const diffDays = Math.ceil(diff / 1000); // <-- for testing
-      return diffDays >= 1;
-    });
-
-    // unfollow accounts
-    for (const account of accountsToUnfollow) {
-      await unfollow(page, account);
-      await page.waitForTimeout(1000);
-    }
-
-    // get suggestions
-    Log.info(PREFIX, "get suggestions...");
-    const suggestions: any[] = await getSuggestions(page);
-    Log.info(PREFIX, `got ${suggestions.length} suggestions`);
-
-    // get public accounts
-    Log.info(PREFIX, "get public accounts...");
-    const publicAccounts = suggestions.filter((suggestion) => {
-      return suggestion.user.is_private === false;
-    });
-    Log.info(PREFIX, `got ${publicAccounts.length} public accounts`);
-
-    // follow public accounts
-    Log.info(PREFIX, "follow public accounts...");
-    for (let i = 0; i < publicAccounts.length; i++) {
-      const account = publicAccounts[i];
-      await follow(page, account);
-      await page.waitForTimeout(1000);
-    }
-  } catch (error) {
-    Log.error(PREFIX, error);
-  } finally {
-    Log.info(PREFIX, "browser closed");
-    //await browser.close();
-  }
 };
 
 const getSuggestions = async (page: puppeteer.Page) => {
