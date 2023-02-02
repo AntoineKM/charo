@@ -22,6 +22,6 @@
     "experimentalDecorators": true,
     "resolveJsonModule": true,
   },
-  "include": ["**/*.ts", "src/tests/instagram-follow.js"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules/", "dist/", "migrations/"]
 }

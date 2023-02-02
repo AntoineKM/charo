@@ -1,11 +1,13 @@
 # dependencies
-/node_modules
-/.pnp
+node_modules
+.pnp
 .pnp.js
 
 # production
-/dist
-/test
+test
+build/**
+dist/**
+.next/**
 
 # misc
 .DS_Store
@@ -23,4 +25,7 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 migrate-mongo-config.js
-/migrations/dist
+migrations/dist
+
+# turbo
+.turbo
