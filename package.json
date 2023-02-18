@@ -9,6 +9,6 @@
   "author": "Antoine Kingue",
   "license": "ISC",
   "dependencies": {
-    "turbo": "^1.7.2"
+    "turbo": "^1.8.1"
   }
 }
