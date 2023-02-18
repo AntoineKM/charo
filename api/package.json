@@ -1,5 +1,5 @@
 {
-  "name": "charo-api",
+  "name": "api",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "chalk": "^4.1.2",
     "cookie": "^0.5.0",
     "dotenv-flow": "^3.2.0",
+    "fastify": "^4.13.0",
     "fs": "^0.0.1-security",
     "mongoose": "^6.6.1",
     "node-cron": "^3.0.1",
