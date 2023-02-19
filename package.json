@@ -2,6 +2,9 @@
   "name": "charo",
   "description": "",
   "scripts": {
+    "start" : "turbo run start",
+    "build": "turbo run build",
+    "build:api": "turbo run build --filter=api",
     "dev": "turbo run dev --parallel --no-cache",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
