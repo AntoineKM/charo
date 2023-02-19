@@ -4,9 +4,20 @@ Instagram, TikTok, Twitter, Linkedin daily CRON tasks that's make your daily soc
 
 ## Current goals
 ### Instagram
-- ~~Connect to your Instagram account via your Session ID~~
-- ~~Get all your suggestions~~
-- ~~Follow all public accounts~~
-- Like the second picture of all public accounts
-- ~~Store each account in a database~~
-- After 1 day, unfollow all accounts
+#### Website
+- Setup [Kitchen](https://kitchen.tonightpass.com) ui kit
+
+##### Instagram
+- Interface to connect with Instagram token
+- Documentation on how to get Instagram token
+
+#### API
+##### Instagram
+- ~Retrieve user data with token~
+- Add users to prospect list
+- Configure CRON tasks (follow, like, unfollow, etc...)
+
+##### Twitter
+- Retrieve user data with token
+- Add users to prospect list
+- Configure CRON tasks (follow, like, unfollow, etc...)
