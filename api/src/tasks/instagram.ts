@@ -1,12 +1,10 @@
-import puppeteer, { ContinueRequestOverrides } from "puppeteer";
+import puppeteer, { ContinueRequestOverrides, Page } from "puppeteer";
 import Instagram from "../models/Instagram";
 import Log from "../utils/log";
 import schedule from "node-schedule";
 
 /**
- * Instagram task will contain 2 jobs:
- * 1. Getting instagram followers (from suggestions) by follow for follow
- * 2. Unfollow peole that we you follow since a week
+ * Deprecated code will be changed in the future
  */
 
 const PREFIX = "[instagram]";
@@ -140,7 +138,7 @@ const instagramTask = async () => {
   });
 };
 
-const getSuggestions = async (page: puppeteer.Page) => {
+const getSuggestions = async (page: Page) => {
   let result = [];
   await page.goto(ROUTES.EXPLORE);
   await page.waitForResponse(async (response) => {
@@ -157,7 +155,7 @@ const getSuggestions = async (page: puppeteer.Page) => {
   return result;
 };
 
-const follow = async (page: puppeteer.Page, account: any) => {
+const follow = async (page: Page, account: any) => {
   const url = `${ROUTES.API_FRIENDS}/${account.user.pk}/follow/`;
   await page.goto(url);
   Log.info(PREFIX, "followed", account.user.username);
@@ -170,7 +168,7 @@ const follow = async (page: puppeteer.Page, account: any) => {
   Log.info(PREFIX, "saved", account.user.username);
 };
 
-const unfollow = async (page: puppeteer.Page, item: any) => {
+const unfollow = async (page: Page, item: any) => {
   const url = `${ROUTES.API_FRIENDS}/${item.account.user.pk}/unfollow/`;
   await page.goto(url);
   Log.info(PREFIX, "unfollowed", item.account.user.username);
