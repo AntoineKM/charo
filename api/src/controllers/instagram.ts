@@ -18,11 +18,14 @@ export default class InstagramController {
 
     const [browser, page] = await BrowserController.launch();
     await page.goto(this.routes.base);
-
-    // accept cookies
-    Log.info(this.prefix, "accepting cookies...");
-    await page.waitForSelector("div[role='dialog']");
-    await page.click("div[role='dialog'] button[tabindex='0']");
+    if (process.env.NODE_ENV !== "production") {
+      // accept cookies
+      Log.info(this.prefix, "accepting cookies...");
+      await page.waitForSelector("div[role='dialog']", { timeout: 1000 });
+      await page.click("div[role='dialog'] button[tabindex='0']");
+    } else {
+      Log.info(this.prefix, "skipping cookies popup");
+    }
     // set cookies
     Log.info(this.prefix, "set cookies");
     await page.setCookie(...cookies);
