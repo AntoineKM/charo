@@ -7,6 +7,7 @@ export default class BrowserController {
   public static async launch(): Promise<[Browser, Page]> {
     const browser = await puppeteer.launch({
       headless: true,
+      args: ["--no-sandbox"],
     });
 
     Log.info(this.prefix, "init browser");
