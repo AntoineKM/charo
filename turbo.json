@@ -13,7 +13,8 @@
         ".next/**",
         "index.js",
         "ssg.js",
-        "loader.js"
+        "loader.js",
+        ".cache"
       ]
     },
     "start": {
