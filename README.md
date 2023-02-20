@@ -20,7 +20,9 @@ Here charo will allow you to create your list of prospects and perform daily tas
 
 #### API
 ##### Instagram
-- ~Retrieve user data with token~
+- ~Retrieve personnal user data with token~
+- ~Retrieve other user data with token~
+- ~Retrieve other user followers~
 - Add users to prospect list
 - Configure CRON tasks (follow, like, unfollow, etc...)
 
