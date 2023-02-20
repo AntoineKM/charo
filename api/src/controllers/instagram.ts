@@ -1,3 +1,11 @@
+import {
+  Browser,
+  ContinueRequestOverrides,
+  HTTPRequest,
+  Page,
+} from "puppeteer";
+import { InstagramUser } from "../types/instagram";
+import getCookie from "../utils/getCookie";
 import Log from "../utils/log";
 import BrowserController from "./browser";
 
@@ -5,9 +13,13 @@ export default class InstagramController {
   private static prefix = "[instagram]";
   private static routes = {
     base: "https://instagram.com",
+    api: {
+      user_profile_info:
+        "https://www.instagram.com/api/v1/users/web_profile_info",
+    },
   };
 
-  public static async me(token: string) {
+  public static connect = async (token: string): Promise<[Browser, Page]> => {
     const cookies = [
       {
         name: "sessionid",
@@ -16,7 +28,33 @@ export default class InstagramController {
       },
     ];
 
-    const [browser, page] = await BrowserController.launch();
+    let headers: {
+      [key: string]: string;
+    } = {};
+
+    const interceptor = async (request: HTTPRequest) => {
+      if (request.method() === "POST") {
+        if (request.headers().cookie)
+          headers = { ...headers, ...request.headers() };
+      }
+
+      if (request.url().includes(this.routes.api.user_profile_info)) {
+        const data = {
+          method: "GET",
+          referrerPolicy: "strict-origin-when-cross-origin",
+          headers: {
+            "x-csrftoken": getCookie(headers?.cookie, "csrftoken"),
+            "x-ig-app-id": headers["x-ig-app-id"],
+          },
+        } as ContinueRequestOverrides;
+        return data;
+      }
+
+      return;
+    };
+
+    const [browser, page] = await BrowserController.launch(interceptor);
+
     await page.goto(this.routes.base);
     if (process.env.NODE_ENV !== "production") {
       // accept cookies
@@ -34,6 +72,11 @@ export default class InstagramController {
     Log.info(this.prefix, "reload page");
     await page.reload();
 
+    return [browser, page];
+  };
+
+  public static async me(token: string): Promise<InstagramUser> {
+    const [browser, page] = await this.connect(token);
     const user = await page.evaluate(() => {
       const scripts = Array.from(
         document.querySelectorAll("script[type='application/json']")
@@ -67,16 +110,29 @@ export default class InstagramController {
     // TODO: Add the user to the database
 
     await browser.close();
-    try {
-      return {
-        username: user.username,
-        profilePicture: user.profile_pic_url,
-      };
-    } catch (error) {
-      Log.error(this.prefix, error);
-      return {
-        error: error.message,
-      };
-    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      profile_pic_url: user.profile_pic_url,
+    };
+  }
+
+  public static async getUser(token: string, username: string) {
+    const [, page] = await this.connect(token);
+    const response = await page.goto(
+      `${this.routes.api.user_profile_info}?username=${username}`
+    );
+    if (!response) throw new Error("user not found");
+    const responseBody = await response?.json();
+    const user = responseBody?.data.user;
+    if (!user) throw new Error("user not found");
+    return {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      profile_pic_url: user.profile_pic_url,
+    };
   }
 }
