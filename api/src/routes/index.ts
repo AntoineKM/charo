@@ -44,7 +44,8 @@ const routes = (fastify: FastifyInstance, _opts: any, next: any) => {
           .replace(__dirname, "")
           .replace(/.ts|.js/g, "")
           .replace(/\\/g, "/")
-          .replace(/\/index/g, "");
+          .replace(/\/index/g, "")
+          .replace(/\[([^\]]+)\]/, ":$1");
         const handler = require(path.join(directory, file)).default;
         handler.method = handler.method || "GET";
 
