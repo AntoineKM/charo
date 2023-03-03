@@ -1,7 +1,20 @@
+import { fetcher, routes } from '@services/api';
 import { Button, Container, Input, Link, Text } from '@tonightpass/kitchen'
 import { NextPage } from 'next';
+import { useRouter } from 'next/router';
+import React from 'react';
+import useLocalStorage from 'use-local-storage';
 
 const HomePage: NextPage = () => {
+  const router = useRouter();
+  const [service, setService] = React.useState<string>("instagram");
+  const [tokens, setTokens] = useLocalStorage<string>("tokens", JSON.stringify({}));
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push(`/dashboard/${service}`);
+  }
+
   return (
       <Container align={"center"} justify={"center"} gap={"normal"} style={{ height: "100%"}}>
         <Text as={"h1"} size={"title"} weight={"bold"}>Charo</Text>
@@ -12,7 +25,7 @@ const HomePage: NextPage = () => {
             row
             align={"center"}
             flex={0}
-            onSubmit={() => {console.log("sent")}}
+            onSubmit={handleSubmit}
           >
           <Input 
             prefix={
@@ -22,10 +35,11 @@ const HomePage: NextPage = () => {
                   fontSize: "12px",
                   background: "rgb(17,19,21)"
                 }}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setService(event.target.value)}
               >
-                <option>Instagram</option>
-                <option>Twitter</option>
-                <option>TikTok</option>
+                <option value={"instagram"}>Instagram</option>
+                <option value={"twitter"}>Twitter</option>
+                <option value={"tiktok"}>TikTok</option>
               </select>
             } 
             suffix={<Button variant={"ghost"} 
@@ -33,6 +47,11 @@ const HomePage: NextPage = () => {
             prefixStyling={false}
             suffixStyling={false}
             placeholder={"token"}
+            // tokens.instagram = value
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setTokens(
+              JSON.stringify({ ...JSON.parse(tokens), [service]: event.target.value })
+            )}
+            value={JSON.parse(tokens)[service]}
           />
         </Container>
       </Container>
