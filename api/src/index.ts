@@ -3,6 +3,7 @@ import Log from "./utils/log";
 import { dbConfig } from "./services/mongodb/config";
 import fastify from "fastify";
 import routes from "./routes";
+import cors from "@fastify/cors";
 
 const main = async () => {
   // load dotenv files
@@ -34,6 +35,7 @@ const main = async () => {
   });
 
   app.register(routes);
+  app.register(cors);
 
   const address = await app.listen(
     process.env.PORT || 8000,
