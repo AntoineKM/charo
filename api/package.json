@@ -19,7 +19,7 @@
     "dotenv-flow": "^3.2.0",
     "fastify": "^4.13.0",
     "fs": "^0.0.1-security",
-    "mongoose": "^6.6.1",
+    "mongoose": "^6.11.3",
     "node-cron": "^3.0.1",
     "node-schedule": "^2.1.0",
     "path": "^0.12.7",
